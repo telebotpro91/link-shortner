@@ -1,0 +1,139 @@
+:root {
+    --bg-dark-primary: #12151c;
+    --bg-dark-secondary: #1c202a;
+    --text-primary: #e6e6e6;
+    --text-secondary: #a0a0a0;
+    --accent-blue: #00a8ff;
+    --accent-green: #2ecc71;
+    --accent-red: #e74c3c;
+    --border-color: #343a46;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-dark-primary);
+    color: var(--text-primary);
+    margin: 0;
+    padding: 24px;
+}
+
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent-blue);
+}
+
+.widget-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+}
+
+.card {
+    background-color: var(--bg-dark-secondary);
+    border-radius: 16px;
+    padding: 24px;
+    border: 1px solid var(--border-color);
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+}
+
+.card-header {
+    margin-bottom: 15px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.sensor-value {
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.unit {
+    font-size: 20px;
+    color: var(--accent-green);
+    margin-right: 5px;
+}
+
+/* Input & Button Styling */
+input[type="text"] {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-dark-primary);
+    color: white;
+    font-size: 16px;
+    outline: none;
+    box-sizing: border-box;
+}
+
+input[type="text"]:focus {
+    border-color: var(--accent-blue);
+}
+
+.emergency-button {
+    background-color: var(--accent-blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 14px 28px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.3s;
+}
+
+.emergency-button:hover {
+    opacity: 0.9;
+}
+
+/* Timer and Blur Logic for Ad Pages */
+.timer-container {
+    text-align: center;
+    margin: 40px 0;
+}
+
+#timer-display {
+    font-size: 24px;
+    color: var(--accent-red);
+    font-weight: bold;
+}
+
+.blur-btn {
+    filter: blur(5px);
+    pointer-events: none;
+    opacity: 0.5;
+    transition: all 0.5s ease;
+}
+
+.active-btn {
+    filter: blur(0);
+    pointer-events: auto;
+    opacity: 1;
+}
