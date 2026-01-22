@@ -4,68 +4,96 @@ const { nanoid } = require('nanoid');
 const path = require('path');
 const cors = require('cors');
 
-// Ye line Windows/Nagpur network par ECONNREFUSED error ko fix karti hai
+// DNS fix for local testing and cloud connectivity
 require('dns').setDefaultResultOrder('ipv4first');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Static files load karne ke liye path fix
+// Static files (public folder) serve karna
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- DATABASE CONNECTION ---
-// server.js ke andar connection line change karein
-const mongoURI = 'mongodb://mybotuser:OUyx645TaQVQlQiM@trunj-shard-00-00.cy6jth5.mongodb.net:27017,trunj-shard-00-01.cy6jth5.mongodb.net:27017,trunj-shard-00-02.cy6jth5.mongodb.net:27017/linkDB?ssl=true&replicaSet=atlas-trunj-shard-0&authSource=admin&retryWrites=true&w=majority';
+// --- DATABASE CONNECTION CONFIG ---
+// Render ke Environment Variable ko prioritize karna
+const mongoURI = process.env.MONGO_URI || 'mongodb+srv://trunj_db_user:XKmpwC85EBT3kruP@cluster2.3hpa4dj.mongodb.net/linkDB?retryWrites=true&w=majority';
 
-mongoose.connect(mongoURI)
-    .then(() => console.log('✅ MongoDB Cloud Connected Successfully!'))
-    .catch(err => console.log('❌ Connection Error:', err));
+const connectDB = async () => {
+    try {
+        await mongoose.connect(mongoURI, {
+            serverSelectionTimeoutMS: 5000 // 5 seconds mein connect hone ki koshish karega
+        });
+        console.log('✅ MongoDB Cloud Connected Successfully!');
+    } catch (err) {
+        console.error('❌ MongoDB Connection Error:', err.message);
+        // Agar connect nahi hua, toh 5 second baad firse try karega
+        setTimeout(connectDB, 5000);
+    }
+};
+
+connectDB();
 
 // --- DATA MODEL ---
-const Url = mongoose.model('Url', new mongoose.Schema({
+const urlSchema = new mongoose.Schema({
     longUrl: String,
     shortCode: String,
-    clicks: { type: Number, default: 0 }
-}));
+    clicks: { type: Number, default: 0 },
+    date: { type: Date, default: Date.now }
+});
+const Url = mongoose.model('Url', urlSchema);
 
 // --- ROUTES ---
 
-// Dashboard stats fetch karne ke liye
+// 1. Dashboard Statistics
 app.get('/api/stats', async (req, res) => {
     try {
         const totalLinks = await Url.countDocuments();
         const links = await Url.find();
         const totalClicks = links.reduce((sum, link) => sum + link.clicks, 0);
-        res.json({ totalLinks, totalClicks, earnings: (totalClicks * 0.01).toFixed(2) });
-    } catch (err) { res.status(500).send(err); }
+        const earnings = (totalClicks * 0.01).toFixed(2);
+        res.json({ totalLinks, totalClicks, earnings });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
+    }
 });
 
-// Link short karne ke liye
+// 2. Link Shorten Karna
 app.post('/api/shorten', async (req, res) => {
     const { longUrl } = req.body;
-    if (!longUrl) return res.status(400).send('URL missing');
+    if (!longUrl) return res.status(400).json({ error: 'URL is required' });
+
     const shortCode = nanoid(6);
     const newUrl = new Url({ longUrl, shortCode });
     await newUrl.save();
-    res.json({ shortUrl: `http://localhost:3000/go/${shortCode}` });
+    
+    // Render ka base URL automatic detect karna
+    const host = req.get('host');
+    const protocol = req.protocol;
+    res.json({ shortUrl: `${protocol}://${host}/go/${shortCode}` });
 });
 
-// Redirection flow
+// 3. Multi-Step Redirection
 app.get('/go/:code', async (req, res) => {
-    const urlData = await Url.findOne({ shortCode: req.params.code });
-    if (urlData) {
-        urlData.clicks++;
-        await urlData.save();
-        const encoded = Buffer.from(urlData.longUrl).toString('base64');
-        res.redirect(`/step1.html?dest=${encoded}`);
-    } else { res.status(404).send('Link not found'); }
+    try {
+        const urlData = await Url.findOne({ shortCode: req.params.code });
+        if (urlData) {
+            urlData.clicks++;
+            await urlData.save();
+            const encodedUrl = Buffer.from(urlData.longUrl).toString('base64');
+            res.redirect(`/step1.html?dest=${encodedUrl}`);
+        } else {
+            res.status(404).send('Link not found');
+        }
+    } catch (err) {
+        res.status(500).send('Redirection error');
+    }
 });
 
-// Default Dashboard load karne ke liye
+// 4. Default Route for Dashboard
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-const PORT = 3000;
-app.listen(PORT, () => console.log(`🚀 Server LIVE: http://localhost:3000`));
+// Port configuration (Render ke liye process.env.PORT zaroori hai)
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`🚀 Server is running on port ${PORT}`));
